@@ -6,6 +6,7 @@ import '../../../../models/order_model.dart';
 import '../../../cart/provider/cart_provider.dart';
 import '../../../orders/provider/orders_provider.dart';
 import '../../../auth/provider/auth_provider.dart';
+import '../../../payment/presentation/screens/dummy_payment_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -38,6 +39,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _nameCtrl.text = authProvider.userName ?? '';
       _phoneCtrl.text = authProvider.userPhone ?? '';
     }
+  }
+
+  Future<void> _payAndSubmitOrder() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final cart = context.read<CartProvider>();
+    if (cart.itemCount == 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Your cart is empty.')));
+      return;
+    }
+
+    // Show dummy payment screen
+    final paymentSuccess = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DummyPaymentScreen(
+          amount: cart.totalAmount,
+          title: 'Order Payment',
+        ),
+      ),
+    );
+
+    if (paymentSuccess != true) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Payment cancelled')));
+      return;
+    }
+
+    // Payment successful, proceed with order submission
+    _submitOrder();
   }
 
   Future<void> _submitOrder() async {
@@ -169,8 +203,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     const SizedBox(height: 40),
                     ElevatedButton(
-                      onPressed: _submitOrder,
-                      child: const Text('Place Order'),
+                      onPressed: _payAndSubmitOrder,
+                      child: const Text('Pay Now'),
                     ),
                   ],
                 ),
