@@ -5,9 +5,17 @@ import '../../../../models/order_model.dart';
 
 class OrderTile extends StatelessWidget {
   final Order order;
+  final bool isExpanded;
+  final ValueChanged<bool> onExpansionChanged;
   final VoidCallback onDelete;
 
-  const OrderTile({super.key, required this.order, required this.onDelete});
+  const OrderTile({
+    super.key,
+    required this.order,
+    required this.isExpanded,
+    required this.onExpansionChanged,
+    required this.onDelete,
+  });
 
   Color get _statusColor {
     switch (order.status) {
@@ -36,6 +44,9 @@ class OrderTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
+        key: PageStorageKey(order.id),
+        initiallyExpanded: isExpanded,
+        onExpansionChanged: onExpansionChanged,
         tilePadding: const EdgeInsets.all(16),
         leading: const Icon(
           Icons.receipt_long_outlined,

@@ -18,6 +18,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   final List<String> _statuses = ['All', 'placed', 'shipped', 'delivered'];
   bool _loadedOrders = false;
   Timer? _snackBarTimer;
+  String? _expandedOrderId;
 
   @override
   void dispose() {
@@ -91,41 +92,63 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: orders.length,
-                    itemBuilder: (ctx, i) => OrderTile(
-                      order: orders[i],
-                      onDelete: () {
-                        final removedOrder = orders[i];
-                        final ordersProvider = context.read<OrdersProvider>();
-                        final messenger = ScaffoldMessenger.of(context);
+                    itemBuilder: (ctx, i) {
+                      final order = orders[i];
+                      final isExpanded = _expandedOrderId == order.id;
 
-                        ordersProvider.removeOrderById(removedOrder.id);
+                      return OrderTile(
+                        key: ValueKey(order.id),
+                        order: order,
+                        isExpanded: isExpanded,
+                        onExpansionChanged: (expanded) {
+                          setState(() {
+                            _expandedOrderId = expanded ? order.id : null;
+                          });
+                        },
+                        onDelete: () {
+                          final removedOrder = order;
+                          final ordersProvider = context.read<OrdersProvider>();
+                          final messenger = ScaffoldMessenger.of(context);
 
-                        _snackBarTimer?.cancel();
-                        messenger.hideCurrentSnackBar();
+                          // If the deleted order is currently expanded, close it
+                          if (_expandedOrderId == removedOrder.id) {
+                            setState(() {
+                              _expandedOrderId = null;
+                            });
+                          }
 
-                        final snackBarController = messenger.showSnackBar(
-                          SnackBar(
-                            content: const Text('Order removed'),
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                            action: SnackBarAction(
-                              label: 'Undo',
-                              onPressed: () {
-                                _snackBarTimer?.cancel();
-                                messenger.hideCurrentSnackBar();
+                          ordersProvider.removeOrderById(removedOrder.id);
 
-                                ordersProvider.addOrder(removedOrder);
-                              },
+                          _snackBarTimer?.cancel();
+                          messenger.hideCurrentSnackBar();
+
+                          final snackBarController = messenger.showSnackBar(
+                            SnackBar(
+                              content: const Text('Order removed'),
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                              action: SnackBarAction(
+                                label: 'Undo',
+                                onPressed: () {
+                                  _snackBarTimer?.cancel();
+                                  messenger.hideCurrentSnackBar();
+
+                                  ordersProvider.addOrder(removedOrder);
+                                },
+                              ),
                             ),
-                          ),
-                        );
+                          );
 
-                        _snackBarTimer = Timer(const Duration(seconds: 2), () {
-                          if (!mounted) return;
-                          snackBarController.close();
-                        });
-                      },
-                    ),
+                          _snackBarTimer = Timer(
+                            const Duration(seconds: 2),
+                            () {
+                              if (!mounted) return;
+                              snackBarController.close();
+                            },
+                          );
+                        },
+                      );
+                    },
                   ),
           ),
         ],
