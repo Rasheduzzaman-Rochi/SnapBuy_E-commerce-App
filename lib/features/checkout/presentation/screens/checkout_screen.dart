@@ -6,7 +6,7 @@ import '../../../../models/order_model.dart';
 import '../../../cart/provider/cart_provider.dart';
 import '../../../orders/provider/orders_provider.dart';
 import '../../../auth/provider/auth_provider.dart';
-import '../../../payment/presentation/screens/dummy_payment_screen.dart';
+import '../../../payment/sslcommerz_payment_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -52,26 +52,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Show dummy payment screen
-    final paymentSuccess = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DummyPaymentScreen(
-          amount: cart.totalAmount,
-          title: 'Order Payment',
-        ),
-      ),
-    );
-
-    if (paymentSuccess != true) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Payment cancelled')));
+    // Process payment with SSLCommerz
+    try {
+      final tranId = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
+      await SslCommerzPaymentService.pay(
+        amount: cart.totalAmount,
+        tranId: tranId,
+        customerName: _nameCtrl.text.trim(),
+        customerPhone: _phoneCtrl.text.trim(),
+        customerEmail:
+            context.read<AuthProvider>().userEmail ?? 'user@example.com',
+        customerAddress: _addressCtrl.text.trim(),
+      );
+      // Payment successful, proceed with order submission
+      _submitOrder();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Payment failed: ${e.toString()}')),
+      );
       return;
     }
-
-    // Payment successful, proceed with order submission
-    _submitOrder();
   }
 
   Future<void> _submitOrder() async {

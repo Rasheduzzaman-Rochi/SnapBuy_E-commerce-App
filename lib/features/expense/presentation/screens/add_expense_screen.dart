@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants.dart';
-import '../../../payment/presentation/screens/dummy_payment_screen.dart';
+import '../../../payment/sslcommerz_payment_service.dart';
 import '../../../../models/expense_model.dart';
 import '../../providers/expense_provider.dart';
 import '../widgets/amount_input.dart';
@@ -48,17 +48,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         ? selectedCategory
         : _noteController.text;
 
-    final paymentSuccess = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DummyPaymentScreen(amount: parsedAmount, title: title),
-      ),
-    );
-
-    if (paymentSuccess != true) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Payment cancelled')));
+    // Process payment with SSLCommerz
+    try {
+      final tranId = 'EXP-${DateTime.now().millisecondsSinceEpoch}';
+      await SslCommerzPaymentService.pay(
+        amount: parsedAmount,
+        tranId: tranId,
+        customerName: 'Expense User',
+        customerPhone: '01700000000',
+        customerEmail: 'user@example.com',
+        customerAddress: 'Address',
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Payment failed: ${e.toString()}')),
+      );
       return;
     }
 
