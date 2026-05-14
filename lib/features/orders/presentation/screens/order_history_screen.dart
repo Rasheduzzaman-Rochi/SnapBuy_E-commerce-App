@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/widgets/main_nav_bar.dart';
@@ -95,14 +94,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     itemBuilder: (ctx, i) => OrderTile(
                       order: orders[i],
                       onDelete: () {
-                        final order = orders[i];
-                        context.read<OrdersProvider>().removeOrderById(
-                          order.id,
-                        );
+                        final removedOrder = orders[i];
+                        final ordersProvider = context.read<OrdersProvider>();
                         final messenger = ScaffoldMessenger.of(context);
+
+                        ordersProvider.removeOrderById(removedOrder.id);
+
                         _snackBarTimer?.cancel();
-                        messenger.clearSnackBars();
-                        messenger.showSnackBar(
+                        messenger.hideCurrentSnackBar();
+
+                        final snackBarController = messenger.showSnackBar(
                           SnackBar(
                             content: const Text('Order removed'),
                             duration: const Duration(seconds: 2),
@@ -111,14 +112,17 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                               label: 'Undo',
                               onPressed: () {
                                 _snackBarTimer?.cancel();
-                                context.read<OrdersProvider>().addOrder(order);
+                                messenger.hideCurrentSnackBar();
+
+                                ordersProvider.addOrder(removedOrder);
                               },
                             ),
                           ),
                         );
+
                         _snackBarTimer = Timer(const Duration(seconds: 2), () {
                           if (!mounted) return;
-                          messenger.removeCurrentSnackBar();
+                          snackBarController.close();
                         });
                       },
                     ),

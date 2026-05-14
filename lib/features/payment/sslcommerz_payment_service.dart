@@ -7,6 +7,28 @@ import 'package:flutter_sslcommerz/model/SSLCommerzInitialization.dart';
 import 'package:flutter_sslcommerz/model/SSLCurrencyType.dart';
 import 'package:flutter_sslcommerz/sslcommerz.dart';
 
+// Helper function to check if payment was successful
+bool isSslCommerzSuccess(String? status) {
+  final value = status?.trim().toLowerCase();
+  return value == 'valid' ||
+      value == 'validated' ||
+      value == 'success' ||
+      value == 'successful';
+}
+
+// Helper function to check if payment was cancelled
+bool isSslCommerzCancelled(String? status) {
+  final value = status?.trim().toLowerCase();
+  return value == null ||
+      value.isEmpty ||
+      value == 'closed' ||
+      value == 'cancelled' ||
+      value == 'canceled' ||
+      value == 'failed' ||
+      value == 'fail' ||
+      value == 'invalid';
+}
+
 class SslCommerzPaymentService {
   static Future<SSLCTransactionInfoModel> pay({
     required double amount,

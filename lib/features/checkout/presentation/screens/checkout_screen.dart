@@ -55,7 +55,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     // Process payment with SSLCommerz
     try {
       final tranId = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
-      await SslCommerzPaymentService.pay(
+      final paymentResult = await SslCommerzPaymentService.pay(
         amount: cart.totalAmount,
         tranId: tranId,
         customerName: _nameCtrl.text.trim(),
@@ -64,12 +64,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             context.read<AuthProvider>().userEmail ?? 'user@example.com',
         customerAddress: _addressCtrl.text.trim(),
       );
+
+      // Debug logging
+      debugPrint('SSLCommerz payment result status: ${paymentResult.status}');
+      debugPrint('SSLCommerz transaction id: ${paymentResult.tranId}');
+      debugPrint('SSLCommerz amount: ${paymentResult.amount}');
+
+      // Check if payment was successful
+      final paymentSuccess = isSslCommerzSuccess(paymentResult.status);
+
+      if (!paymentSuccess) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Payment cancelled')));
+        }
+        return;
+      }
+
       // Payment successful, proceed with order submission
-      _submitOrder();
+      if (mounted) {
+        _submitOrder();
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment failed: ${e.toString()}')),
-      );
+      debugPrint('SSLCommerz payment error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Payment failed: ${e.toString()}')),
+        );
+      }
       return;
     }
   }
