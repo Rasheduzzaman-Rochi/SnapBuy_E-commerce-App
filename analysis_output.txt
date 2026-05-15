@@ -1,5 +1,0 @@
-Analyzing e_commerce_cse464...                                  
-
-   info • Don't use 'BuildContext's across async gaps • lib/features/checkout/presentation/screens/checkout_screen.dart:77:9 • use_build_context_synchronously
-
-1 issue found. (ran in 2.0s)
