@@ -11,7 +11,6 @@ class ProductDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final product = ModalRoute.of(context)!.settings.arguments as Product;
-    final cart = context.watch<CartProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -117,15 +116,34 @@ class ProductDetailScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton.icon(
-            onPressed: () {
-              cart.addItem(product);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${product.name} added to cart'),
-                  backgroundColor: Colors.black87,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+            onPressed: () async {
+              try {
+                await context.read<CartProvider>().addItem(product);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${product.name} added to cart'),
+                    backgroundColor: Colors.black87,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                final message = e
+                    .toString()
+                    .replaceFirst('Exception: ', '')
+                    .trim();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      message.isEmpty
+                          ? 'Unable to add item to cart. Please try again.'
+                          : message,
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
             icon: const Icon(Icons.shopping_bag_outlined),
             label: const Text('Add to Cart', style: TextStyle(fontSize: 18)),

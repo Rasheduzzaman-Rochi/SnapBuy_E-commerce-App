@@ -150,7 +150,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       if (!mounted) return;
 
-      cart.clearCart();
+      await cart.clearCart();
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.orderSuccess,

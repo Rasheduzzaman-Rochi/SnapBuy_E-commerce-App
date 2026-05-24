@@ -7,8 +7,30 @@ import '../../../../models/product_model.dart';
 import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../provider/cart_provider.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCart());
+  }
+
+  Future<void> _loadCart() async {
+    try {
+      await context.read<CartProvider>().loadCartFromFirestore(force: true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_cartErrorMessage(e))));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +58,9 @@ class CartScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: cart.itemCount == 0
+      body: cart.isLoading && cart.itemCount == 0
+          ? const Center(child: CircularProgressIndicator())
+          : cart.itemCount == 0
           ? const Center(
               child: Text('Your cart is empty', style: TextStyle(fontSize: 16)),
             )
@@ -103,7 +127,10 @@ class CartScreen extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.remove_circle_outline),
-                  onPressed: () => cart.decreaseQuantity(product.id),
+                  onPressed: () => _runCartAction(
+                    context,
+                    () => cart.decreaseQuantity(product.id),
+                  ),
                 ),
                 Text(
                   qty.toString(),
@@ -114,7 +141,8 @@ class CartScreen extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
-                  onPressed: () => cart.addItem(product),
+                  onPressed: () =>
+                      _runCartAction(context, () => cart.addItem(product)),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
@@ -122,7 +150,10 @@ class CartScreen extends StatelessWidget {
                     Icons.delete_outline,
                     color: Colors.redAccent,
                   ),
-                  onPressed: () => cart.removeItem(product.id),
+                  onPressed: () => _runCartAction(
+                    context,
+                    () => cart.removeItem(product.id),
+                  ),
                 ),
               ],
             ),
@@ -174,5 +205,24 @@ class CartScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _runCartAction(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_cartErrorMessage(e))));
+    }
+  }
+
+  String _cartErrorMessage(Object error) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    return message.isEmpty ? 'Cart update failed. Please try again.' : message;
   }
 }

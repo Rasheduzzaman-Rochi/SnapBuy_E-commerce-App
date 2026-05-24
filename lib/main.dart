@@ -118,9 +118,20 @@ class AuthGate extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
 
     if (auth.isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        context
+            .read<CartProvider>()
+            .loadCartFromFirestore()
+            .catchError((_) {});
+      });
       return const HomeScreen();
     }
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      context.read<CartProvider>().clearLocalCart();
+    });
     return const LoginScreen();
   }
 }

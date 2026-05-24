@@ -5,6 +5,8 @@ class Product {
   final String category;
   final String imageUrl;
   final String description;
+  final String sellerId;
+  final String sellerName;
 
   const Product({
     required this.id,
@@ -13,6 +15,8 @@ class Product {
     required this.category,
     required this.imageUrl,
     required this.description,
+    this.sellerId = '',
+    this.sellerName = '',
   });
 
   factory Product.fromFirestore(Map<String, dynamic> doc, String id) {
@@ -36,6 +40,8 @@ class Product {
       category: doc['category'] ?? '',
       imageUrl: rawImage?.toString().trim() ?? '',
       description: doc['description'] ?? '',
+      sellerId: doc['sellerId']?.toString().trim() ?? '',
+      sellerName: doc['sellerName']?.toString().trim() ?? '',
     );
   }
 }
