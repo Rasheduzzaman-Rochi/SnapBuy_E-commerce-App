@@ -33,10 +33,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     if (_loadedOrders) return;
     _loadedOrders = true;
 
-    final authProvider = context.read<AuthProvider>();
-    context.read<OrdersProvider>().startOrdersListener(
-      userEmail: authProvider.userEmail,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authProvider = context.read<AuthProvider>();
+      context.read<OrdersProvider>().startOrdersListener(
+        userEmail: authProvider.userEmail,
+      );
+    });
   }
 
   @override

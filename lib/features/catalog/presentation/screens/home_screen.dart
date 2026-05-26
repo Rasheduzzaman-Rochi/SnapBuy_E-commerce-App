@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants.dart';
+import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/main_nav_bar.dart';
 import '../../../../models/product_model.dart';
 import '../../../cart/provider/cart_provider.dart';
@@ -47,47 +48,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-              ),
-              child: const Icon(
-                Icons.shopping_bag_rounded,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'SnapBuy',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.4,
-                    height: 1,
-                  ),
-                ),
-                Text(
-                  'Premium shopping',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        title: const AppLogo(
+          size: 38,
+          subtitle: 'Premium shopping',
+          textColor: Colors.white,
+          subtitleColor: Color(0xC7FFFFFF),
         ),
         actions: [
           Padding(
