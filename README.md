@@ -623,4 +623,6 @@ SSLC_SANDBOX=
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+All rights reserved.
+
+This project is provided for portfolio and demonstration purposes only. No permission is granted to copy, modify, distribute, use, or create derivative works from this project without written permission from the author.
