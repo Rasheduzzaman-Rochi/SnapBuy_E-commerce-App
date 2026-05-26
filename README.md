@@ -1,6 +1,6 @@
 # SnapBuy
 
-SnapBuy is a Flutter-based e-commerce mobile application built with Firebase. It includes user authentication, Google sign-in, product browsing, cart management, checkout, SSLCommerz sandbox payment testing, and order history management.
+SnapBuy is a Flutter-based e-commerce mobile application built with Firebase. It includes user authentication, Google sign-in, product browsing, persistent Firestore cart management, checkout, SSLCommerz sandbox payment testing, order history management, and shared app branding.
 
 ## Overview
 
@@ -14,9 +14,11 @@ SnapBuy is designed as a complete mobile shopping app for Android and iOS. The p
 - Product catalog
 - Product details screen
 - Product search and category filtering
-- Add to cart
-- Update cart quantity
-- Remove items from cart
+- Add to cart with Firestore persistence
+- Load saved cart after login or app reopen
+- Update cart quantity with Firestore sync
+- Remove items from cart with Firestore sync
+- Clear local and Firestore cart after successful order/payment
 - Checkout flow
 - SSLCommerz sandbox payment integration
 - Order creation after successful payment only
@@ -26,6 +28,7 @@ SnapBuy is designed as a complete mobile shopping app for Android and iOS. The p
 - Delete order with undo option
 - User profile and sign out
 - Bottom navigation
+- Shared SnapBuy logo widget using `assets/logo.png`
 
 ## Tech Stack
 
@@ -48,6 +51,8 @@ lib/
     constants.dart
     theme.dart
     widgets/
+      app_logo.dart
+      main_nav_bar.dart
 
   features/
     auth/
@@ -59,6 +64,7 @@ lib/
       presentation/
 
     cart/
+      models/
       presentation/
       provider/
 
@@ -73,6 +79,8 @@ lib/
       sslcommerz_payment_service.dart
 
   models/
+  services/
+    cart_service.dart
   firebase_options.dart
   main.dart
 ```
@@ -112,25 +120,94 @@ For Google sign-in on Android, SHA-1 and SHA-256 fingerprints must be added in F
 
 ## Firestore Usage
 
-Cloud Firestore is used to store user and order-related data.
+Cloud Firestore is used to store products, users, carts, and orders.
+
+### Product Catalog
+
+Products are loaded from:
+
+```text
+products/{productId}
+```
+
+The app maps Firestore product documents into `Product` models. Supported product fields include:
+
+```text
+name
+price
+category
+imageUrl
+description
+sellerId
+sellerName
+```
+
+### Persistent Cart
+
+Logged-in users have a Firestore-backed cart:
+
+```text
+users/{uid}/cart/{productId}
+  productId
+  name
+  price
+  imageUrl
+  sellerId
+  sellerName
+  quantity
+  addedAt
+  updatedAt
+```
+
+The cart document ID is the `productId`, so adding the same product increments quantity instead of creating duplicates.
+
+Cart behavior:
+
+- `CartProvider.loadCartFromFirestore()` loads saved cart items after login/app reopen.
+- `CartService.addToCart()` uses a Firestore transaction to increment quantity safely.
+- Quantity updates are synced to Firestore.
+- Quantity `0` or less deletes the cart document.
+- Removing an item deletes `users/{uid}/cart/{productId}`.
+- Successful checkout clears both local provider state and Firestore cart documents.
+
+If no user is logged in, Firestore cart writes are blocked and the app shows a login-friendly error.
+
+### Orders
 
 Example order data:
 
 ```text
 orders/
   orderId/
+    orderId
     userId
+    userEmail
     items
-    totalAmount
+    total
     customerName
-    phone
-    address
-    paymentGateway
-    paymentStatus
+    customerPhone
+    customerAddress
     status
-    transactionId
     createdAt
 ```
+
+### Firestore Security Rules
+
+Prototype Firestore rules are available at the repository root:
+
+```text
+../firestore.rules
+```
+
+The cart rule only allows users to access their own cart:
+
+```javascript
+match /users/{userId}/cart/{cartItemId} {
+  allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+```
+
+Review and harden all Firestore rules before production release.
 
 ## Payment System
 
@@ -205,7 +282,24 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/logo.png
 ```
+
+## App Logo
+
+The shared app logo is stored at:
+
+```text
+assets/logo.png
+```
+
+It is registered in `pubspec.yaml` and used through:
+
+```text
+lib/core/widgets/app_logo.dart
+```
+
+Use `AppLogo` anywhere the SnapBuy brand/logo is shown. Normal action icons, such as password fields, navigation icons, cart buttons, and profile avatars, should stay as standard Material icons unless they are being used as a brand logo.
 
 ## Prerequisites
 
@@ -359,6 +453,22 @@ Main providers:
 
 These providers are registered at app root using `MultiProvider`.
 
+### Cart State
+
+`CartProvider` keeps the UI state in memory and syncs logged-in cart changes through `CartService`.
+
+Important cart methods:
+
+- `loadCartFromFirestore()`
+- `addItem(product)`
+- `updateQuantity(productId, quantity)`
+- `increaseQuantity(productId)`
+- `decreaseQuantity(productId)`
+- `removeItem(productId)`
+- `clearCart()`
+
+The app loads cart data from Firestore when the auth gate detects a logged-in user and when the cart screen opens.
+
 ## Order Management
 
 The Orders screen supports:
@@ -386,7 +496,8 @@ To test SSLCommerz sandbox payment:
 Expected result after successful payment:
 
 - Order is created
-- Cart is cleared
+- Local cart is cleared
+- Firestore cart under `users/{uid}/cart` is cleared
 - User can see the order in Orders screen
 
 Expected result after cancelling payment:
@@ -394,6 +505,27 @@ Expected result after cancelling payment:
 - Order is not created as successful
 - Cart remains unchanged
 - User can retry checkout
+
+## Testing Cart Persistence
+
+To test Firestore cart persistence:
+
+1. Log in with email/password or Google.
+2. Add a product to cart.
+3. Confirm Firestore has a document at `users/{uid}/cart/{productId}`.
+4. Close and reopen the app, or log out and log back in.
+5. Open the cart screen and confirm the item is restored.
+6. Increase/decrease quantity and confirm Firestore updates.
+7. Remove the item and confirm the Firestore cart document is deleted.
+8. Complete a successful checkout and confirm the Firestore cart collection is empty.
+
+## Testing Logo Display
+
+To test the shared logo:
+
+1. Open the login screen and confirm the auth header uses `assets/logo.png`.
+2. Open sign up or OTP screens and confirm the same auth header logo appears.
+3. Log in and confirm the home app bar uses the same SnapBuy logo.
 
 ## Troubleshooting
 
@@ -423,6 +555,25 @@ Check:
 - Firebase config files are in the correct folders
 - Firebase project matches Android/iOS app configuration
 
+### Cart Does Not Persist
+
+Check:
+
+- User is logged in before adding to cart
+- Firestore is enabled
+- Firestore security rules allow `users/{uid}/cart/{productId}` for the signed-in user
+- Product documents have valid `name`, `price`, and `imageUrl` fields
+- App was rebuilt after Firebase config changes
+
+### Logo Not Showing
+
+Check:
+
+- `assets/logo.png` exists
+- `assets/logo.png` is registered under `flutter.assets` in `pubspec.yaml`
+- `flutter pub get` was run after changing assets
+- The UI uses `AppLogo` for brand/logo display
+
 ### SSLCommerz Credentials Missing
 
 Check:
@@ -443,6 +594,7 @@ SSLC_SANDBOX=
 - SSLCommerz is integrated using Flutter plugin for sandbox testing
 - Production payment validation backend is not included
 - Inventory management is not connected to a backend admin system
+- Cart merge between guest and logged-in sessions is not implemented
 - No push notification system yet
 - No product review or wishlist system yet
 
@@ -466,6 +618,8 @@ SSLC_SANDBOX=
 - Current Android application ID: `com.example.e_commerce_cse464`
 - Update package name, app icon, and Firebase config before production release
 - Keep `.env` file private and never commit real credentials
+- Keep shared brand usage centralized through `AppLogo`
+- Keep Firestore security rules reviewed before public testing
 
 ## License
 
